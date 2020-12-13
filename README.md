@@ -4,22 +4,30 @@ My individual project for CMPE 257 focuses on semantic segmentation, specificall
 
 ## Results
 
+![Input](report/images/image128-input.jpg)
+![Output](report/images/image128-output.png)
+
 ## Commentary
 
-I was unable to get TensorFlow 2 to recognize the GPU available to it on the SJSU HPC, so I dropped down to TensorFlow 1.15.0.
-
-I knew it was all working when I did:
-module load python3/3.6.6
-module load cuda/10.0
+I was unable to get TensorFlow 2 to recognize the GPU available to it on the SJSU HPC, so I dropped down to TensorFlow 1.15.0. It was difficult to understand why the code wasn't working, but I knew it related to TensorFlow not being able to access the GPU. I was able to test whether it recognized the GPU using the following procedure:
 
 ```shell
+module load python3/3.6.6
+module load cuda/10.0
 srun -p gpu --gres=gpu -n 1 -N 1 -c 2 --pty /bin/bash
+```
+
+Then, in the shell on the GPU:
+
+```shell
 python
 >>> import tensorflow as tf
 >>> tf.test.is_gpu_available()
 ...
 True
 ```
+
+Once it returned `True` (with TensorFlow 1.15.0), I knew it was working correctly. 
 
 ## Run the App
 
