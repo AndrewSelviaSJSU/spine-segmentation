@@ -1,3 +1,4 @@
+%! suppress = TooLargeSection
 \documentclass[conference]{IEEEtran}
 \usepackage{cite}
 %\usepackage{amsmath,amssymb,amsfonts}
@@ -40,18 +41,17 @@ T\kern-.1667em\lower.7ex\hbox{E}\ker,n-.125emX}}
 
     \section{Introduction}\label{sec:introduction}
 
-    Scoliosis is a common spinal deformity affecting around 3 percent of the U.S.\ population~\cite{scoliosis-media-and-community-guide}.
-    For decades, advocates have promoted testing administered through grade schools to achieve early detection and improve patient outcomes.
-    These efforts are justified since no cure exists but early, accurate, and frequent testing can prevent unnecessary suffering later in life.
+    Scoliosis is a common spinal deformity affecting around 3 percent of the U.S.\ population~\cite{scoliosis-media-and-community-guide}.\ For decades, advocates have promoted testing administered through grade schools to achieve early detection and improve patient outcomes.\ These efforts are justified since no cure exists but early, accurate, and frequent testing can prevent unnecessary suffering later in life.
 
-    Obviously, innovation which might accelerate, standardize, and reduce the cost of scoliosis detection would have a large impact.
-    For exactly these reasons, computer vision is a compelling research area which could help millions of people.
+    Obviously, innovation which might accelerate, standardize, and reduce the cost of scoliosis detection would have a large impact.\ For exactly these reasons, computer vision is a compelling research area which could help millions of people.
 
-    The ultimate goal of my research is to detect Cobb angles from X-rays for scoliosis detection.
-    Though that remains out-of-reach for now, I have proven spine segmentation is possible through the use of TensorFlow and the U-Net CNN architecture.
-    In future research, I intend to leverage this paper's results to achieve the end goal of scoliosis detection.
+    The ultimate goal of my research is to detect Cobb angles from X-rays for scoliosis detection.\ Though that remains out-of-reach for now, I have proven spine segmentation is possible through the use of TensorFlow and the U-Net CNN architecture.\ In future research, I intend to leverage this paper's results to achieve the end goal of scoliosis detection.
 
     \section{Implementation}\label{sec:implementation}
+
+    \subsection{Code}\label{subsec:code}
+
+    The code for this project is hosted on GitHub~\cite{spine-segmentation}.\ The code is inspired heavily by the implementation created by François Chollet~\cite{image-segmentation-with-a-u-net-like-architecture}.
 
     \subsection{Data}\label{subsec:data}
 
