@@ -29,7 +29,7 @@ True
 
 Once it returned `True` (with TensorFlow 1.15.0), I knew it was working correctly. 
 
-## Run the App
+## Getting Started
 
 After gaining access to the SJSU HPC and cloning this repo there, you can follow the steps below to reproduce the results.
 
@@ -38,10 +38,28 @@ First, load the required modules for running the code on a GPU node:
 ```shell
 module load python3/3.6.6
 module load cuda/10.0
+```
+
+Then, create a virtual environment and install the required packages:
+
+```shell
+virtualenv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run the App
+
+Each time you log in you will have to re-set-up your environment:
+
+```shell
+cd spine-segmentation
+module load python3/3.6.6
+module load cuda/10.0
 source venv/bin/activate
 ```
 
-Next, submit a batch job to train the model to perform spine segmentation and write results out to the data directory. Clear the predictions before each run to ensure you don't mix up results across multiple runs.
+Now you can submit a batch job to train the model to perform spine segmentation and write results out to the data directory. Clear the predictions before each run to ensure you don't mix up results across multiple runs.
 
 ```shell
 rm -rf ../data/training/masks/predictions
