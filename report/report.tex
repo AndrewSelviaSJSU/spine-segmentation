@@ -9,8 +9,8 @@
 
 % Andrew Selvia added these
 \usepackage{subfig}
-\graphicspath{ {./images/} }
 \usepackage[hidelinks]{hyperref}
+\graphicspath{ {images/} }
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.17}
 
@@ -41,37 +41,41 @@ T\kern-.1667em\lower.7ex\hbox{E}\ker,n-.125emX}}
 
     \section{Introduction}\label{sec:introduction}
 
-    Scoliosis is a common spinal deformity affecting around 3 percent of the U.S.\ population~\cite{scoliosis-media-and-community-guide}.\ For decades, advocates have promoted testing administered through grade schools to achieve early detection and improve patient outcomes.\ These efforts are justified since no cure exists but early, accurate, and frequent testing can prevent unnecessary suffering later in life.
+    Scoliosis is a common spinal deformity affecting around 3 percent of the U.S.\ population~\cite{scoliosis-media-and-community-guide}.\ For decades, advocates have promoted testing children starting in grade school to detect spinal curvature as they grow.\ These efforts are justified since no cure exists but early, accurate, and frequent testing can prevent unnecessary suffering later in life.
 
     Obviously, innovation which might accelerate, standardize, and reduce the cost of scoliosis detection would have a large impact.\ For exactly these reasons, computer vision is a compelling research area which could help millions of people.
 
-    The ultimate goal of my research is to detect Cobb angles from X-rays for scoliosis detection.\ Though that remains out-of-reach for now, I have proven spine segmentation is possible through the use of TensorFlow and the U-Net CNN architecture.\ In future research, I intend to leverage this paper's results to achieve the end goal of scoliosis detection.
+    The ultimate goal of my research is to detect Cobb angles from X-rays for scoliosis detection.\ Though that remains out-of-reach for now, I have proven spine segmentation is possible through the use of TensorFlow and the U-Net CNN architecture.
 
     \section{Implementation}\label{sec:implementation}
 
     \subsection{Code}\label{subsec:code}
 
-    The code for this project is hosted on GitHub~\cite{spine-segmentation}.\ The code is inspired heavily by the implementation created by François Chollet~\cite{image-segmentation-with-a-u-net-like-architecture}.
+    Similarly to the original paper~\cite{cobb-angle-measurement-of-spine-from-x-ray-images-using-convolutional-neural-network}, U-Net was chosen as the neural network architecture for this project.\ A quick literature study demonstrated its wide adoption for medical imaging tasks, lending confidence that this approach is well-founded.
+
+    The code for this project is hosted on GitHub~\cite{spine-segmentation}.\ The code is inspired heavily by the U-Net implementation created for the official Keras code examples by François Chollet~\cite{image-segmentation-with-a-u-net-like-architecture} but has been adapted to train on the X-ray dataset rather than the original Oxford-IIIT Pet Dataset~\cite{pets-dataset}.\ Importantly, the original implementation is in the form of a Jupyter notebook;\ this had to be converted into a standalone Python application which could be run via a SLURM batch job on the SJSU HPC\@.\ The ReLU activation function, RMSprop optimizer, and Sparse Categorical Crossentropy loss function remain in use exactly as in the original implementation.
 
     \subsection{Data}\label{subsec:data}
 
-    The authors of the original paper~\cite{cobb-angle-measurement-of-spine-from-x-ray-images-using-convolutional-neural-network} kindly shared the data set they used for their work.\ It consists of 481 training images and 128 testing images.\ These raw X-rays vary in size but all provide a posteroanterior view of spines.\ The degree of the curves represented varies from mild to severe.
+    The authors of the paper that inspired this project~\cite{cobb-angle-measurement-of-spine-from-x-ray-images-using-convolutional-neural-network} kindly shared their data when contacted via email.\ It consists of 481 training images and 128 testing images.\ These raw X-rays vary in size but all provide a posteroanterior view of spines.\ The degree of the curves represented varies from mild to severe.
 
     Some images exhibit characteristics which present challenges to learning.\ Specifically, the images contain visual artifice in the form of necklaces, organs, and surgically-implanted Harrington rods used to stabilize the spine from further curvature.\ In addition, there is the complication of blurriness which can at times render the spine imperceptibly blended behind visual noise.
 
     \subsection{Pre-processing}\label{subsec:pre-processing}
 
-    Unfortunately, the masks used for image segmentation are in MATLAB format, thereby proving incompatible with this project's Python training implementation.\ Thus, each of the 609 images was hand-labeled into a trimap~\cite{create-trimaps-with-topaz-mask-ai} using the Mask AI program created by Topaz Labs~\cite{topaz-mask-ai}.\ It took 6 hours to label them all.
+    Unfortunately, the provided masks used for image segmentation are in MATLAB format, thereby proving incompatible with this project's Python training implementation.\ Thus, each of the 609 images was hand-labeled into a trimap~\cite{create-trimaps-with-topaz-mask-ai} using the Mask AI program created by Topaz Labs.\ It took 6 hours to label them all.
 
-    The masks were created with red, green, and blue regions in the RGB colorspace.\ However, the U-Net implementation leveraged for this project expected the regions to be constrained to only three shades of black.\ Therefore, they all had to be pre-processed further to match the color-constrained trimap format.\ Luckily, this proved to be easily scriptable.
+    The masks were created with red, green, and blue (RGB) regions where green represents the high-confidence segment of the image to learn, red represents the segment to crop, and blue represents the border between the two.\ You can see an example trimap in \autoref{fig:results1}.
+
+    The hand-labeled RGB trimaps required further processing to be used in the U-Net implementation leveraged for this project.\ It expects the trimaps to be constrained to only the three darkest shades of black (1, 2, and 3 in RGB parlance).\ Therefore, the pixels of each RGB trimap were mapped into that colorspace.
 
     \subsection{Training}\label{subsec:training}
 
-    Similarly to the original paper~\cite{cobb-angle-measurement-of-spine-from-x-ray-images-using-convolutional-neural-network}, U-Net was chosen as the neural network architecture of choice for this project.\ A quick literature study demonstrated its wide adoption for medical imaging tasks, lending confidence that this approach is well-founded.\ The network itself is defined using the Keras framework which exposes the building blocks of neural networks atop low-level TensorFlow constructs.\ Given my lack of experience, I leveraged an existing U-Net implementation~\cite{image-segmentation-with-a-u-net-like-architecture} used to segment pets from their backgrounds trained on The Oxford-IIIT Pet Dataset~\cite{pets-dataset}.
+    Training occurred over 15 epochs.\ Higher numbers of epochs proved only to overfit the training data.
 
-    Of course, the existing U-Net implementation needed some adaptations to work with the spine dataset.\ More importantly, the code blocks which previously ran via a notebook needed to be assembled into a true application so that it could run on the SJSU HPC.\ A slurm job definition was created to run the application on the HPC\@.
+    A critical discovery was the impact the batch size played in the accuracy of the model's predictions.\ When left at its initial value of 32, the model struggled to learn how to segment spines due to the drastic reduction in total training data between the pets dataset containing ~7,500 images and the X-ray dataset containing just 481.\ When batch size was reduced to 3, the model's accuracy rose dramatically.
 
-    Performing training on the HPC became a top priority upon discovery of the time required to train the model locally with just a CPU.\ Training the model for 15 epochs took ~25 minutes on my local computer which lacks a discrete GPU.\ In contrast, training it similarly on a GPU node in the SJSU HPC yielded a much more reasonable training time of ~2.5 minutes;\ a 10x improvement.
+    Performing training on the HPC became a top priority upon discovery of the time required to train the model locally with just a CPU.\ Training the model for 15 epochs took ~25 minutes locally without a GPU.\ Training it on a GPU node in the SJSU HPC yielded a much more reasonable training time of ~2.5 minutes;\ a 10x improvement.
 
     \begin{figure}
         \caption{Loss and Accuracy}
@@ -215,70 +219,72 @@ T\kern-.1667em\lower.7ex\hbox{E}\ker,n-.125emX}}
 
     \subsection{Testing}\label{subsec:testing}
 
-    The trained model was evaluated over all 128 testing images plus one extra that I will explain in the conclusion section.\ The testing loss and accuracy are reported in~\autoref{fig:loss-and-accuracy}.
+    The trained model was evaluated over all 128 testing images plus one extra that will be explained in \autoref{sec:results}.\ Loss and accuracy are reported in~\autoref{fig:loss-and-accuracy} for each data subset.\ Notably, the validation set clearly tracked the out-of-sample testing performance during training.
 
     \subsection{Post-processing}\label{subsec:post-processing}
 
     Once the model was trained and evaluated against the testing data, it was used to predict segmentation trimaps for each of the testing images.\ Of course, the predicted trimaps were normalized to the network's output size of 150x150 pixels.\ These square outputs look distorted when compared to the original X-rays, so each was resized to the original dimensions of its respective testing image.
 
-    While input X-rays could now be compared with their predicted trimaps, it became obvious that interlacing the two would yield a superior visualization.\ By leveraging ImageMagick techniques as demonstrated in this discussion~\cite{image-magick}, each of the testing image trimaps was interlaced with its input image.\ In between, each trimap had to be converted from the predicted representation using three distinguishable colors (black, gray, and white) to an intermediate trimap representation using the three darkest shades of black (1, 2, and 3 in rgb coordinates).\ This conversion produces a trimap that is compatible with ImageMagick, though it is impossible to distinguish between the shades of black visually.\ Each of the final interlaced images was saved to disk.
+    While input X-rays could now be compared with their predicted trimaps, it became obvious that interlacing the two would yield a superior visualization.\ By leveraging ImageMagick techniques~\cite{image-magick}, each of the testing image trimaps was interlaced with its input image.\ In between, each trimap had to be converted from the predicted representation using three distinguishable colors (black, gray, and white) to an intermediate trimap representation using the three darkest shades of black (1, 2, and 3 in RGB coordinates).\ This conversion produces a trimap that is compatible with ImageMagick, though it is impossible to distinguish between the shades of black visually.\ Each of the final interlaced images was saved to disk.
 
     \section{Results}\label{sec:results}
 
-    The two metrics used to evaluate the model's ability to learn are loss and accuracy.\ The predictions it made yielded a loss rate of 24\% and an accuracy of 92\% when compared against the hand-drawn trimaps.\ These metrics are likely insufficient for real-world application when compared against human performance.\ While a metric tracking human performance at spine segmentation could not be identified, I expect it to be higher than the model's performance.\ Keep in mind, the ultimate goal of doing Cobb angle prediction has the potential for more competition as inter- and intra-person performance varies between 3--10\%\cite{doi:10.14245/ns.1938426.213} due to factors including image quality, professional experience, and time pressure.\ That problem retains promise for further research.
+    The two metrics used to evaluate the model's ability to learn are loss and accuracy.\ The predictions it made yielded a loss rate of 24\% and an accuracy of 92\% when compared against the hand-labeled trimaps.\ These metrics are likely insufficient for real-world application when compared against human performance.\ While a metric tracking human performance at spine segmentation could not be identified, I expect it to be higher than the model's performance.\ Keep in mind, the ultimate goal of doing Cobb angle prediction has the potential for more competition as inter- and intra-person performance varies between 3--10\%\cite{doi:10.14245/ns.1938426.213} due to factors including image quality, professional experience, and time pressure.\ That problem retains promise for further research.
 
-    The following figures visualize some unique challenges the model faced during training.\ As you can see in \autoref{fig:results4}, it successfully segments the spine through its extreme curvature, even surviving its encounter with the edge. \autoref{fig:results3} shows how it learns to segment the spine despite the presence of what appear to be Harrington rods surgically implanted to stabilize the spine;\ though, the predicted mask does appear to have included the upper screws of that mechanism. \autoref{fig:results} and \autoref{fig:results2} both demonstrate failure cases which would prevent Cobb angle prediction.\ In \autoref{fig:results}, it seems the obscuring organ results in a gap in the mask.\ To human eyes, the organ increases contrast, thus actually making it easier to identify the edges of the spine, but it seems the model cannot make that same conclusion.\ The gap in the predicted mask for \autoref{fig:results2} may also have been affected by an organ, though the necklace may have had a hand to play in the inaccuracy as well.
+    The following figures visualize some unique challenges the model faced.\ As you can see in \autoref{fig:results1}, it successfully segments the spine through its extreme curvature, even surviving its encounter with the edge. \autoref{fig:results2} shows how it learns to segment the spine despite the presence of what appear to be Harrington rods surgically implanted to stabilize the spine;\ though, the predicted mask does appear to have included the upper screws of that mechanism. \autoref{fig:results3} and \autoref{fig:results4} both demonstrate failure cases which would prevent Cobb angle prediction.\ In \autoref{fig:results3}, it seems the obscuring organ results in a gap in the mask.\ To human eyes, the organ increases contrast, thus actually making it easier to identify the edges of the spine, but it seems the model cannot make that same conclusion.\ The gap in the predicted mask for \autoref{fig:results4} may also have been affected by an organ, though the necklace may have had a hand to play in the inaccuracy as well.
 
-    Finally, I would like to draw special attention to the predicted mask shown in \autoref{fig:results5}.\ The model has segmented the spine quite well in this case.\ It is especially meaningful to me to see this result as it is, in fact, my own.
-    
+    Finally, I would like to draw special attention to the predicted mask shown in \autoref{fig:results5}.\ The model has segmented the spine quite well in this case.\ It is especially meaningful to me to see this result as it is, in fact, my own spine.
+
     \begin{figure}
-        \caption{A test image and its masks}
-        \label{fig:results}
+        \caption{Edge-intersecting spine segmentation}
+        \label{fig:results1}
         \centering
-        \subfloat[\centering Input]{{\includegraphics[width=2.75cm]{image32-input.jpg} }}
-        \subfloat[\centering Mask]{{\includegraphics[width=2.75cm]{image32-mask.png} }}
-        \subfloat[\centering Output]{{\includegraphics[width=2.75cm]{image32-output.png} }}
+        \subfloat[\centering Input]{{\includegraphics[width=2.5cm]{image70-input.jpg} }}
+        \subfloat[\centering Trimap]{{\includegraphics[width=2.5cm]{image70-mask.png} }}
+        \subfloat[\centering Output]{{\includegraphics[width=2.5cm]{image70-output.png} }}
     \end{figure}
 
     \begin{figure}
-        \caption{A test image and its masks}
+        \caption{Harrington rods slightly impact spine segmentation}
         \label{fig:results2}
         \centering
-        \subfloat[\centering Input]{{\includegraphics[width=2.75cm]{image61-input.jpg} }}
-        \subfloat[\centering Mask]{{\includegraphics[width=2.75cm]{image61-mask.png} }}
-        \subfloat[\centering Output]{{\includegraphics[width=2.75cm]{image61-output.png} }}
+        \subfloat[\centering Input]{{\includegraphics[width=2.5cm]{image63-input.jpg} }}
+        \subfloat[\centering Trimap]{{\includegraphics[width=2.5cm]{image63-mask.png} }}
+        \subfloat[\centering Output]{{\includegraphics[width=2.5cm]{image63-output.png} }}
     \end{figure}
 
     \begin{figure}
-        \caption{A test image and its masks}
+        \caption{Obscuring organ results in failed spine segmentation}
         \label{fig:results3}
         \centering
-        \subfloat[\centering Input]{{\includegraphics[width=2.75cm]{image63-input.jpg} }}
-        \subfloat[\centering Mask]{{\includegraphics[width=2.75cm]{image63-mask.png} }}
-        \subfloat[\centering Output]{{\includegraphics[width=2.75cm]{image63-output.png} }}
+        \subfloat[\centering Input]{{\includegraphics[width=2.5cm]{image32-input.jpg} }}
+        \subfloat[\centering Trimap]{{\includegraphics[width=2.5cm]{image32-mask.png} }}
+        \subfloat[\centering Output]{{\includegraphics[width=2.5cm]{image32-output.png} }}
     \end{figure}
 
     \begin{figure}
-        \caption{A test image and its masks}
+        \caption{Necklace impacts spine segmentation}
         \label{fig:results4}
         \centering
-        \subfloat[\centering Input]{{\includegraphics[width=2.75cm]{image70-input.jpg} }}
-        \subfloat[\centering Mask]{{\includegraphics[width=2.75cm]{image70-mask.png} }}
-        \subfloat[\centering Output]{{\includegraphics[width=2.75cm]{image70-output.png} }}
+        \subfloat[\centering Input]{{\includegraphics[width=2.5cm]{image61-input.jpg} }}
+        \subfloat[\centering Trimap]{{\includegraphics[width=2.5cm]{image61-mask.png} }}
+        \subfloat[\centering Output]{{\includegraphics[width=2.5cm]{image61-output.png} }}
     \end{figure}
 
     \begin{figure}
-        \caption{A test image and its masks}
+        \caption{The author's own spine segmentation}
         \label{fig:results5}
         \centering
-        \subfloat[\centering Input]{{\includegraphics[width=2.75cm]{image128-input.jpg} }}
-        \subfloat[\centering Mask]{{\includegraphics[width=2.75cm]{image128-mask.png} }}
-        \subfloat[\centering Output]{{\includegraphics[width=2.75cm]{image128-output.png} }}
+        \subfloat[\centering Input]{{\includegraphics[width=2.5cm]{image128-input.jpg} }}
+        \subfloat[\centering Trimap]{{\includegraphics[width=2.5cm]{image128-mask.png} }}
+        \subfloat[\centering Output]{{\includegraphics[width=2.5cm]{image128-output.png} }}
     \end{figure}
 
     \section{Conclusion}\label{sec:conclusion}
 
     The ability to segment the spine from a posteroanterior X-ray with 92\% accuracy is an encouraging first step toward the ultimate goal of Cobb angle prediction.\ Next semester, I intend to build upon this work in the Deep Learning course by training a model to detect the individual vertebrae in segmented spine images.\ For now, I conclude with gratitude to Dr. Mahima Agumbe Suresh for educating me in the fundamentals of machine learning.
+
+    \newpage
 
     \bibliographystyle{ieeetr}
     \bibliography{report}
